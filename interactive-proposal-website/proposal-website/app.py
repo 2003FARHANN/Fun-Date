@@ -5,7 +5,7 @@ import os
 import secrets
 import sqlite3
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -19,6 +19,12 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG_PATH = BASE_DIR / "config.json"
+SCHEDULE_TIMEZONE = timezone(timedelta(hours=6), name="Asia/Dhaka")
+
+
+def schedule_now() -> datetime:
+    """Return the current time used for date scheduling validation."""
+    return datetime.now(SCHEDULE_TIMEZONE)
 
 
 def load_site_config(path: Path) -> dict[str, Any]:
@@ -243,13 +249,18 @@ def validate_response(payload: dict[str, Any], config: dict[str, Any]) -> tuple[
     except ValueError:
         return None, "Please choose a valid date."
 
-    if selected_date < date.today():
-        return None, "Please choose today or a future date."
-
     selected_time = str(payload["selected_time"])
     valid_times = {item["value"] for item in config["schedule"]["time_options"]}
     if selected_time not in valid_times:
         return None, "Please choose an available time."
+
+    selected_datetime = datetime.combine(
+        selected_date,
+        datetime.strptime(selected_time, "%H:%M").time(),
+        tzinfo=SCHEDULE_TIMEZONE,
+    )
+    if selected_datetime <= schedule_now():
+        return None, "Please choose a future date and time."
 
     food = str(payload["food"])
     valid_foods = {item["name"] for item in config["food"]["options"]}

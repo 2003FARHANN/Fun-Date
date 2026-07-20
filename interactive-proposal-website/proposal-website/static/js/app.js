@@ -42,13 +42,60 @@ const state = {
   dodgeCount: 0,
 };
 
-function todayInLocalTime() {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 10);
+function dateValueInLocalTime(value = new Date()) {
+  const localDate = new Date(value);
+  localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+  return localDate.toISOString().slice(0, 10);
 }
 
-dateInput.min = todayInLocalTime();
+function minutesFromTimeValue(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function refreshScheduleAvailability() {
+  const now = new Date();
+  const today = dateValueInLocalTime(now);
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const hasTimeLeftToday = config.schedule.time_options.some(
+    (item) => minutesFromTimeValue(item.value) > currentMinutes,
+  );
+
+  if (hasTimeLeftToday) {
+    dateInput.min = today;
+  } else {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    dateInput.min = dateValueInLocalTime(tomorrow);
+  }
+
+  if (dateInput.value && dateInput.value < dateInput.min) {
+    dateInput.value = "";
+    timeInput.value = "";
+  }
+
+  [...timeInput.options].forEach((option) => {
+    if (!option.value) return;
+    option.disabled =
+      dateInput.value === today && minutesFromTimeValue(option.value) <= currentMinutes;
+  });
+
+  if (timeInput.selectedOptions[0]?.disabled) {
+    timeInput.value = "";
+  }
+}
+
+function selectedScheduleIsFuture() {
+  if (!dateInput.value || !timeInput.value) return false;
+  const [year, month, day] = dateInput.value.split("-").map(Number);
+  const [hours, minutes] = timeInput.value.split(":").map(Number);
+  const selected = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return selected.getTime() > Date.now();
+}
+
+refreshScheduleAvailability();
+dateInput.addEventListener("change", refreshScheduleAvailability);
+timeInput.addEventListener("focus", refreshScheduleAvailability);
 
 function showStep(step) {
   const nextStep = Math.max(0, Math.min(step, screens.length - 1));
@@ -150,14 +197,20 @@ scheduleForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const error = document.getElementById("schedule-error");
   error.textContent = "";
+  refreshScheduleAvailability();
 
   if (!dateInput.value || dateInput.value < dateInput.min) {
-    error.textContent = "Please choose today or a future date.";
+    error.textContent = "Please choose an available future date.";
     dateInput.focus();
     return;
   }
   if (!timeInput.value) {
     error.textContent = "Please choose a time.";
+    timeInput.focus();
+    return;
+  }
+  if (!selectedScheduleIsFuture()) {
+    error.textContent = "That time has already passed. Please choose a future time.";
     timeInput.focus();
     return;
   }
