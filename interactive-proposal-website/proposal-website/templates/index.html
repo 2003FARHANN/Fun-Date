@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ site_config.theme.background }}">
+  <meta name="description" content="A playful, interactive date proposal.">
+  <title>{{ site_config.site.title }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <span>♥</span><span>✿</span><span>♥</span><span>✦</span><span>♥</span><span>✿</span>
+  </div>
+
+  <main class="app-shell">
+    <div class="progress" aria-label="Proposal progress">
+      {% for _ in range(7) %}<span class="progress-dot{% if loop.first %} active{% endif %}"></span>{% endfor %}
+    </div>
+
+    <div class="stage" id="stage" aria-live="polite">
+      <section class="screen active" data-step="0" id="proposal-screen">
+        <article class="card proposal-card">
+          <p class="eyebrow">{{ site_config.proposal.eyebrow }} · for {{ site_config.site.recipient_name }}</p>
+          <div class="hero-emoji" aria-hidden="true">{{ site_config.proposal.emoji }}</div>
+          <h1>{{ site_config.proposal.title }}</h1>
+          <p>{{ site_config.proposal.subtitle }}</p>
+          <div class="proposal-actions">
+            <button class="button button-primary" id="yes-button" type="button">{{ site_config.proposal.yes_label }}</button>
+            <button class="button button-no" id="no-button" type="button" aria-describedby="dodge-message">{{ site_config.proposal.no_label }}</button>
+          </div>
+          <p class="dodge-message" id="dodge-message">Choose carefully ✨</p>
+        </article>
+      </section>
+
+      <section class="screen" data-step="1">
+        <article class="card compact-card">
+          <div class="hero-emoji bounce" aria-hidden="true">{{ site_config.surprise.emoji }}</div>
+          <h2>{{ site_config.surprise.title }}</h2>
+          <p>{{ site_config.surprise.subtitle }}</p>
+          <button class="button button-primary next-button" type="button">{{ site_config.surprise.button_label }}</button>
+        </article>
+      </section>
+
+      <section class="screen" data-step="2">
+        <article class="card form-card">
+          <div class="section-emoji" aria-hidden="true">{{ site_config.schedule.emoji }}</div>
+          <h2>{{ site_config.schedule.title }}</h2>
+          <form id="schedule-form" novalidate>
+            <label for="date-input">{{ site_config.schedule.date_label }}</label>
+            <input id="date-input" name="date" type="date" required>
+            <label for="time-input">{{ site_config.schedule.time_label }}</label>
+            <select id="time-input" name="time" required>
+              <option value="">Select a time...</option>
+              {% for item in site_config.schedule.time_options %}
+                <option value="{{ item.value }}">{{ item.label }}</option>
+              {% endfor %}
+            </select>
+            <p class="form-error" id="schedule-error" role="alert"></p>
+            <button class="button button-primary" type="submit">{{ site_config.schedule.button_label }}</button>
+          </form>
+        </article>
+      </section>
+
+      <section class="screen" data-step="3">
+        <article class="card food-card">
+          <div class="section-emoji" aria-hidden="true">{{ site_config.food.emoji }}</div>
+          <h2>{{ site_config.food.title }}</h2>
+          <p>{{ site_config.food.subtitle }}</p>
+          <div class="food-grid" id="food-grid" role="radiogroup" aria-label="Food choices">
+            {% for item in site_config.food.options %}
+              <button class="food-option" type="button" role="radio" aria-checked="false" data-food="{{ item.name }}">
+                <span aria-hidden="true">{{ item.emoji }}</span>
+                <strong>{{ item.name }}</strong>
+              </button>
+            {% endfor %}
+          </div>
+          <p class="form-error" id="food-error" role="alert"></p>
+          <button class="button button-primary" id="food-next" type="button" disabled>{{ site_config.food.button_label }}</button>
+        </article>
+      </section>
+
+      <section class="screen" data-step="4">
+        <article class="card compact-card">
+          <div class="section-emoji" aria-hidden="true">{{ site_config.confirmation.emoji }}</div>
+          <h2>{{ site_config.confirmation.title }}</h2>
+          <p class="lead" id="ready-message"></p>
+          <p class="postscript">{{ site_config.confirmation.postscript }}</p>
+          <div class="heart-row" aria-hidden="true">♥ ♥ ♥ ♥ ♥</div>
+          <button class="button button-primary next-button" type="button">{{ site_config.confirmation.button_label }}</button>
+        </article>
+      </section>
+
+      <section class="screen" data-step="5">
+        <article class="card fee-card">
+          <div class="section-emoji" aria-hidden="true">💳</div>
+          <h2>{{ site_config.fee.title }}</h2>
+          <p>{{ site_config.fee.description }}</p>
+          <div class="fee-plan">
+            <div>
+              <strong>{{ site_config.fee.plan_name }}</strong>
+              <small>{{ site_config.fee.fine_print }}</small>
+            </div>
+            <span id="fee-display">...</span>
+          </div>
+          <p class="fee-disclaimer">Just a joke—this website never asks for card or payment information.</p>
+          <button class="button button-primary" id="fee-button" type="button" disabled>calculating the totally serious fee...</button>
+        </article>
+      </section>
+
+      <section class="screen" data-step="6">
+        <article class="card compact-card finale-card">
+          <div class="hero-emoji pulse" aria-hidden="true">{{ site_config.finale.emoji }}</div>
+          <h2>{{ site_config.finale.title }}</h2>
+          <p>{{ site_config.finale.subtitle }}</p>
+          <div class="date-summary" id="date-summary"></div>
+          <p class="save-status" id="save-status" role="status"></p>
+          <button class="button button-ghost" id="restart-button" type="button">{{ site_config.finale.restart_label }}</button>
+        </article>
+      </section>
+    </div>
+
+    <footer>{{ site_config.site.footer_text }} — {{ site_config.site.sender_name }} <span aria-hidden="true">🌸</span></footer>
+  </main>
+
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+  <script id="site-config" type="application/json" nonce="{{ csp_nonce }}">{{ site_config | tojson }}</script>
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+</body>
+</html>

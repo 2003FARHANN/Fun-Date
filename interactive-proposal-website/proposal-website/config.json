@@ -1,0 +1,94 @@
+{
+  "site": {
+    "title": "A Little Question For You",
+    "recipient_name": "My Favorite Person",
+    "sender_name": "Your Secret Admirer",
+    "footer_text": "made with courage, code & a little bit of chaos"
+  },
+  "proposal": {
+    "eyebrow": "A tiny question",
+    "emoji": "🐶",
+    "title": "Will you go on a date with me?",
+    "subtitle": "I promise it will be worth saying yes.",
+    "yes_label": "YES ♥",
+    "no_label": "no 🐾",
+    "dodge_messages": [
+      "Nice try 😌",
+      "That button is a little shy!",
+      "Nope, it moved again 🐾",
+      "Are you sure you found the right button?",
+      "The pink button looks friendlier 💗"
+    ]
+  },
+  "surprise": {
+    "emoji": "🧽",
+    "title": "WAIT, YOU ACTUALLY SAID YES?? 😭",
+    "subtitle": "I was so ready for you to say no 😅",
+    "button_label": "okay okay! →"
+  },
+  "schedule": {
+    "emoji": "📅🐾",
+    "title": "So... when are you free?",
+    "date_label": "Pick a day 📅",
+    "time_label": "What time? ⏰",
+    "button_label": "set the date! ♥",
+    "time_options": [
+      {"value": "16:00", "label": "4:00 PM"},
+      {"value": "17:00", "label": "5:00 PM"},
+      {"value": "18:00", "label": "6:00 PM"},
+      {"value": "19:00", "label": "7:00 PM"},
+      {"value": "20:00", "label": "8:00 PM"}
+    ]
+  },
+  "food": {
+    "emoji": "🍽️✨",
+    "title": "What are we feeling?",
+    "subtitle": "Pick your vibe",
+    "button_label": "this one! →",
+    "options": [
+      {"name": "Pizza", "emoji": "🍕"},
+      {"name": "Sushi", "emoji": "🍣"},
+      {"name": "Burgers", "emoji": "🍔"},
+      {"name": "Pasta", "emoji": "🍝"},
+      {"name": "Tacos", "emoji": "🌮"},
+      {"name": "Ramen", "emoji": "🍜"}
+    ]
+  },
+  "confirmation": {
+    "emoji": "🚗💨",
+    "title": "Glad you didn't say no.",
+    "message_template": "Be ready by {time} on {date} — I'm coming to get you!",
+    "postscript": "P.S. Normal people text. I made a whole website for you. No big deal.",
+    "button_label": "okay, I accept 💝"
+  },
+  "fee": {
+    "mode": "random",
+    "fixed_amount": 499,
+    "random_min": 199,
+    "random_max": 999,
+    "random_step": 50,
+    "currency": "USD",
+    "currency_symbol": "$",
+    "title": "one small fee",
+    "description": "To confirm your acceptance of this date, please complete the following totally normal transaction.",
+    "plan_name": "Date Agreement™",
+    "fine_print": "one-time fee • completely fictional • absolutely worth it",
+    "button_template": "pay {symbol}{amount} & confirm 💝"
+  },
+  "finale": {
+    "emoji": "💌",
+    "title": "It's officially a date!",
+    "subtitle": "Screenshot this page. I can't wait to see you.",
+    "restart_label": "replay the chaos ↻"
+  },
+  "theme": {
+    "background": "#f8e8ee",
+    "background_deep": "#efd2dc",
+    "card": "#fffdfb",
+    "text": "#4b2734",
+    "heading": "#7a203d",
+    "primary": "#d56891",
+    "primary_dark": "#b54870",
+    "secondary": "#a976d2"
+  }
+}
