@@ -6,8 +6,11 @@ import secrets
 import sqlite3
 import uuid
 from datetime import date, datetime, timezone
+from html import escape
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 import click
 from flask import Flask, current_app, g, jsonify, render_template, request
@@ -122,6 +125,114 @@ def generate_fee(config: dict[str, Any]) -> int:
     return secrets.choice(choices)
 
 
+def send_submission_notification(
+    *,
+    response_id: str,
+    selected_date: str,
+    selected_time: str,
+    food: str,
+    fee_amount: int,
+    fee_currency: str,
+    created_at: str,
+) -> bool:
+    """Send a private owner notification through Resend's HTTPS API.
+
+    Notifications are optional and never make a successful form submission
+    fail. Configure them with RESEND_API_KEY and NOTIFICATION_EMAIL_TO.
+    """
+    api_key = os.environ.get("RESEND_API_KEY", "").strip()
+    recipient = os.environ.get("NOTIFICATION_EMAIL_TO", "").strip()
+    sender = os.environ.get(
+        "NOTIFICATION_EMAIL_FROM",
+        "Fun Date <onboarding@resend.dev>",
+    ).strip()
+
+    if not api_key or not recipient:
+        current_app.logger.info(
+            "Email notification skipped: RESEND_API_KEY or NOTIFICATION_EMAIL_TO is missing."
+        )
+        return False
+
+    safe = {
+        "response_id": escape(response_id),
+        "selected_date": escape(selected_date),
+        "selected_time": escape(selected_time),
+        "food": escape(food),
+        "fee_amount": escape(str(fee_amount)),
+        "fee_currency": escape(fee_currency),
+        "created_at": escape(created_at),
+    }
+    subject = f"New Fun Date response: {selected_date} at {selected_time}"
+    text_body = (
+        "Someone completed your Fun Date proposal!\n\n"
+        f"Date: {selected_date}\n"
+        f"Time: {selected_time}\n"
+        f"Food: {food}\n"
+        f"Playful fee: {fee_currency} {fee_amount}\n"
+        f"Response ID: {response_id}\n"
+        f"Submitted at (UTC): {created_at}\n"
+    )
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#4b2734">
+      <h2 style="color:#7a203d">Someone said YES! 💌</h2>
+      <p>A visitor completed your Fun Date proposal.</p>
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Date</strong></td><td style="padding:8px;border-bottom:1px solid #eee">{safe['selected_date']}</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Time</strong></td><td style="padding:8px;border-bottom:1px solid #eee">{safe['selected_time']}</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Food</strong></td><td style="padding:8px;border-bottom:1px solid #eee">{safe['food']}</td></tr>
+        <tr><td style="padding:8px;border-bottom:1px solid #eee"><strong>Playful fee</strong></td><td style="padding:8px;border-bottom:1px solid #eee">{safe['fee_currency']} {safe['fee_amount']}</td></tr>
+      </table>
+      <p style="font-size:12px;color:#777">Response ID: {safe['response_id']}<br>Submitted at (UTC): {safe['created_at']}</p>
+    </div>
+    """
+    payload = json.dumps(
+        {
+            "from": sender,
+            "to": [recipient],
+            "subject": subject,
+            "text": text_body,
+            "html": html_body,
+        }
+    ).encode("utf-8")
+    email_request = Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Idempotency-Key": f"fun-date-{response_id}",
+            "User-Agent": "fun-date-notifier/1.0",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(email_request, timeout=12) as response:
+            if 200 <= response.status < 300:
+                current_app.logger.info("Email notification sent for response %s.", response_id)
+                return True
+            current_app.logger.error(
+                "Email notification failed for response %s with status %s.",
+                response_id,
+                response.status,
+            )
+    except HTTPError as error:
+        error_body = error.read(500).decode("utf-8", errors="replace")
+        current_app.logger.error(
+            "Resend rejected notification for response %s: HTTP %s %s",
+            response_id,
+            error.code,
+            error_body,
+        )
+    except (URLError, TimeoutError, OSError) as error:
+        current_app.logger.error(
+            "Email notification could not be delivered for response %s: %s",
+            response_id,
+            error,
+        )
+    return False
+
+
 def validate_response(payload: dict[str, Any], config: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
     required = ("selected_date", "selected_time", "food", "fee_amount", "accepted")
     if any(field not in payload for field in required):
@@ -233,7 +344,20 @@ def register_routes(app: Flask) -> None:
             ),
         )
         database.commit()
-        return jsonify(id=response_id, status="saved"), 201
+        notification_sent = send_submission_notification(
+            response_id=response_id,
+            selected_date=clean["selected_date"],
+            selected_time=clean["selected_time"],
+            food=clean["food"],
+            fee_amount=clean["fee_amount"],
+            fee_currency=currency,
+            created_at=created_at,
+        )
+        return jsonify(
+            id=response_id,
+            status="saved",
+            notification_sent=notification_sent,
+        ), 201
 
     @app.errorhandler(404)
     def not_found(_error):
